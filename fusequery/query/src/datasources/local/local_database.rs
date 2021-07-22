@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0.
 
 use std::collections::HashMap;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use common_exception::ErrorCode;
@@ -12,22 +14,31 @@ use common_planners::CreateTablePlan;
 use common_planners::DropTablePlan;
 use common_planners::TableEngineType;
 
+use crate::datasources::database_catalog::TableFunctionMeta;
+use crate::datasources::database_catalog::TableMeta;
 use crate::datasources::local::CsvTable;
 use crate::datasources::local::NullTable;
 use crate::datasources::local::ParquetTable;
 use crate::datasources::Database;
-use crate::datasources::Table;
-use crate::datasources::TableFunction;
+
+const LOCAL_TBL_ID_BEGIN: u64 = 10000;
+//const LOCAL_TBL_ID_END: u64 = 20000;
 
 pub struct LocalDatabase {
-    tables: RwLock<HashMap<String, Arc<dyn Table>>>,
+    tables: RwLock<HashMap<String, Arc<TableMeta>>>,
+    seq_id: AtomicU64,
 }
 
 impl LocalDatabase {
     pub fn create() -> Self {
         LocalDatabase {
             tables: RwLock::new(HashMap::default()),
+            seq_id: AtomicU64::new(LOCAL_TBL_ID_BEGIN),
         }
+    }
+    pub fn next_id(&self) -> u64 {
+        // TODO overflow check
+        self.seq_id.fetch_add(1, Ordering::SeqCst)
     }
 }
 
@@ -45,7 +56,7 @@ impl Database for LocalDatabase {
         true
     }
 
-    fn get_table(&self, table_name: &str) -> Result<Arc<dyn Table>> {
+    fn get_table(&self, table_name: &str) -> Result<Arc<TableMeta>> {
         let table_lock = self.tables.read();
         let table = table_lock
             .get(table_name)
@@ -53,11 +64,11 @@ impl Database for LocalDatabase {
         Ok(table.clone())
     }
 
-    fn get_tables(&self) -> Result<Vec<Arc<dyn Table>>> {
+    fn get_tables(&self) -> Result<Vec<Arc<TableMeta>>> {
         Ok(self.tables.read().values().cloned().collect())
     }
 
-    fn get_table_functions(&self) -> Result<Vec<Arc<dyn TableFunction>>> {
+    fn get_table_functions(&self) -> Result<Vec<Arc<TableFunctionMeta>>> {
         Ok(vec![])
     }
 
@@ -94,9 +105,10 @@ impl Database for LocalDatabase {
             }
         };
 
-        self.tables
-            .write()
-            .insert(table_name.to_string(), Arc::from(table));
+        self.tables.write().insert(
+            table_name.to_string(),
+            TableMeta::with_id(Arc::from(table), self.next_id()),
+        );
         Ok(())
     }
 

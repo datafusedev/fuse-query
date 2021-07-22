@@ -9,6 +9,7 @@ use common_planners::DropDatabasePlan;
 use common_planners::DropTablePlan;
 pub use common_store_api::CreateDatabaseActionResult;
 pub use common_store_api::CreateTableActionResult;
+pub use common_store_api::DatabaseMeta;
 pub use common_store_api::DropDatabaseActionResult;
 pub use common_store_api::DropTableActionResult;
 pub use common_store_api::GetDatabaseActionResult;
@@ -69,6 +70,14 @@ impl MetaApi for StoreClient {
         table: String,
     ) -> common_exception::Result<GetTableActionResult> {
         self.do_action(GetTableAction { db, table }).await
+    }
+
+    async fn get_databases(
+        &mut self,
+        ver_lower_bound: Option<u64>,
+    ) -> common_exception::Result<DatabaseMeta> {
+        let req = GetDatabasesReq { ver_lower_bound };
+        self.do_action(req).await
     }
 }
 
@@ -139,3 +148,10 @@ action_declare!(
     GetTableActionResult,
     StoreDoAction::GetTable
 );
+
+// get databases
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Eq, PartialEq)]
+pub struct GetDatabasesReq {
+    pub ver_lower_bound: Option<u64>,
+}
+action_declare!(GetDatabasesReq, DatabaseMeta, StoreDoAction::GetDatabases);

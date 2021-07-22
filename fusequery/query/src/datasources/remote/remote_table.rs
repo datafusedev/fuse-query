@@ -38,14 +38,14 @@ impl RemoteTable {
         schema: DataSchemaRef,
         store_client_provider: StoreClientProvider,
         _options: TableOptions,
-    ) -> Result<Box<dyn Table>> {
+    ) -> Result<RemoteTable> {
         let table = Self {
             db,
             name,
             schema,
             store_client_provider,
         };
-        Ok(Box::new(table))
+        Ok(table)
     }
 }
 
@@ -131,15 +131,6 @@ impl Table for RemoteTable {
                     block_stream,
                 )
                 .await?;
-
-            //            let mut um = UserMgr::new(client);
-            //            let a = "test";
-            //            um.get_users(&vec![a]).await;
-            //            um.add_user("user", "pass", "salt").await;
-            //            um.drop_user("user", None).await;
-            //            um.update_user("user", None, None, None).await;
-            //            um.get_users(&vec!["user"]).await;
-            //            um.get_all_users().await;
         }
 
         Ok(())

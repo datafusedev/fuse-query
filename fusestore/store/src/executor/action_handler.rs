@@ -37,7 +37,7 @@ pub trait ReplySerializer {
 
 pub struct ActionHandler {
     /// The raft-based meta data entry.
-    /// In our design meta serves for both the distributed file system and the catalog storage such as db,tabel etc.
+    /// In our design meta serves for both the distributed file system and the catalogs_bak storage such as db,tabel etc.
     /// Thus in case the `fs` is a Dfs impl, `meta_node` is just a reference to the `Dfs.meta_node`.
     /// TODO(xp): turn on dead_code warning when we finished action handler unit test.
     pub(crate) meta_node: Arc<MetaNode>,
@@ -111,10 +111,11 @@ impl ActionHandler {
             StoreDoAction::GetDatabase(a) => s.serialize(self.handle(a).await?),
             StoreDoAction::DropDatabase(a) => s.serialize(self.handle(a).await?),
 
-            // table
+            // database meta
             StoreDoAction::CreateTable(a) => s.serialize(self.handle(a).await?),
             StoreDoAction::DropTable(a) => s.serialize(self.handle(a).await?),
             StoreDoAction::GetTable(a) => s.serialize(self.handle(a).await?),
+            StoreDoAction::GetDatabases(a) => s.serialize(self.handle(a).await?),
 
             // part
             StoreDoAction::ReadPlan(a) => s.serialize(self.handle(a).await?),
