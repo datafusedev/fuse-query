@@ -10,6 +10,7 @@ use common_datavalues::columns::DataColumn;
 use common_datavalues::DataSchemaRef;
 use common_exception::ErrorCode;
 use common_exception::Result;
+use common_functions::scalars::InListFunction;
 use common_planners::Expression;
 use common_planners::ExpressionAction;
 use common_planners::ExpressionChain;
@@ -111,6 +112,25 @@ impl ExpressionExecutor {
                 ExpressionAction::Constant(constant) => {
                     let column = DataColumn::Constant(constant.value.clone(), rows);
                     column_map.insert(constant.name.clone(), column);
+                }
+                ExpressionAction::InList(inlist) => {
+                    let f = InListFunction::try_create(
+                        inlist.list.clone(),
+                        inlist.negated,
+                        inlist.data_type.clone(),
+                    )?;
+                    let col = column_map.get(&inlist.expr_name);
+                    match col {
+                        Some(c) => {
+                            let res_col = f.eval(&[c.clone()], rows)?;
+                            column_map.insert(inlist.name.clone(), res_col);
+                        }
+                        _ => {
+                            return Err(ErrorCode::LogicalError(
+                                "Exist subquery must be prepared before the main query's execution",
+                            ));
+                        }
+                    }
                 }
                 _ => {}
             }
